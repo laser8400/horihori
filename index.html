@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>旧国名・領域 ランダム暗記</title>
+<style>
+  body { font-family: sans-serif; background-color: #f0f4f8; padding: 20px; max-width: 650px; margin: 0 auto; }
+  h1 { text-align: center; color: #333; font-size: 1.2rem; }
+  .note { font-size: 0.8rem; color: #666; margin-bottom: 20px; background: #fff; padding: 10px; border-radius: 8px; }
+  
+  /* ボタンのスタイル */
+  #shuffleButton {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: white;
+    background-color: #1e88e5; /* 青 */
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  }
+  #shuffleButton:hover {
+    background-color: #1565c0;
+  }
+
+  /* カードのスタイル */
+  #card-container { margin-top: 10px; }
+  details {
+    background-color: white;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+  summary {
+    padding: 15px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  summary::after { content: "▼"; font-size: 0.8rem; color: #999; }
+  details[open] summary::after { content: "▲"; }
+  .answer {
+    padding: 15px;
+    background-color: #e3f2fd;
+    border-top: 1px solid #eee;
+    color: #333;
+  }
+  .yomi { font-size: 1.1rem; font-weight: bold; color: #d32f2f; margin-bottom: 5px; }
+  .area { font-size: 0.9rem; }
+  .tag { font-size: 0.7rem; color: #fff; background: #555; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px;}
+</style>
+</head>
+<body>
+
+<h1>旧国名ランダム暗記（全68国）</h1>
+<div class="note">
+  <b>使い方：</b>「シャッフル」ボタンを押すたびに、**すべての旧国名**の順番がランダムに変わります。タップすると答え（読み方と領域）が表示されます。
+</div>
+
+<button id="shuffleButton">全てをシャッフル（やり直し）🔄</button>
+
+<div id="card-container">
+  </div>
+
+<script>
+// --- 1. 旧国名のデータ定義 ---
+// ※プリントのルール（現代仮名遣い、東北地方の特例、下総の領域除外など）を反映済み
+const provinces = [
+    // 畿内
+    { name: "山城", yomi: "やましろ", area: "京都府" },
+    { name: "大和", yomi: "やまと", area: "奈良県" },
+    { name: "河内", yomi: "かわち", area: "大阪府" },
+    { name: "和泉", yomi: "いずみ", area: "大阪府" },
+    { name: "摂津", yomi: "せっつ", area: "大阪府、兵庫県" },
+    // 東海道
+    { name: "伊賀", yomi: "いが", area: "三重県" },
+    { name: "伊勢", yomi: "いせ", area: "三重県" },
+    { name: "志摩", yomi: "しま", area: "三重県" },
+    { name: "尾張", yomi: "おわり", area: "愛知県" },
+    { name: "三河", yomi: "みかわ", area: "愛知県" },
+    { name: "遠江", yomi: "とおとうみ", area: "静岡県" },
+    { name: "駿河", yomi: "するが", area: "静岡県" },
+    { name: "伊豆", yomi: "いず", area: "静岡県" },
+    { name: "甲斐", yomi: "かい", area: "山梨県" },
+    { name: "相模", yomi: "さがみ", area: "神奈川県" },
+    { name: "武蔵", yomi: "むさし", area: "埼玉県、東京都、神奈川県", note: "プリント例題" },
+    { name: "安房", yomi: "あわ", area: "千葉県" },
+    { name: "上総", yomi: "かずさ", area: "千葉県" },
+    { name: "下総", yomi: "しもうさ", area: "※領域問題は出題なし", note: "プリント指定" },
+    { name: "常陸", yomi: "ひたち", area: "茨城県" },
+    // 東山道
+    { name: "近江", yomi: "おうみ", area: "滋賀県" },
+    { name: "美濃", yomi: "みの", area: "岐阜県" },
+    { name: "飛騨", yomi: "ひだ", area: "岐阜県" },
+    { name: "信濃", yomi: "しなの", area: "長野県" },
+    { name: "上野", yomi: "こうずけ", area: "群馬県" },
+    { name: "下野", yomi: "しもつけ", area: "栃木県" },
+    { name: "陸奥", yomi: "むつ", area: "青森県、岩手県、宮城県、福島県", note: "プリント指定" },
+    { name: "出羽", yomi: "でわ", area: "秋田県、山形県", note: "プリント指定" },
+    // 北陸道
+    { name: "若狭", yomi: "わかさ", area: "福井県" },
+    { name: "越前", yomi: "えちぜん", area: "福井県" },
+    { name: "加賀", yomi: "かが", area: "石川県" },
+    { name: "能登", yomi: "のと", area: "石川県" },
+    { name: "越中", yomi: "えっちゅう", area: "富山県" },
+    { name: "越後", yomi: "えちご", area: "新潟県" },
+    { name: "佐渡", yomi: "さど", area: "新潟県" },
+    // 山陰道
+    { name: "丹波", yomi: "たんば", area: "京都府、兵庫県" },
+    { name: "丹後", yomi: "たんご", area: "京都府" },
+    { name: "但馬", yomi: "たじま", area: "兵庫県" },
+    { name: "因幡", yomi: "いなば", area: "鳥取県" },
+    { name: "伯耆", yomi: "ほうき", area: "鳥取県" },
+    { name: "出雲", yomi: "いずも", area: "島根県" },
+    { name: "石見", yomi: "いわみ", area: "島根県" },
+    { name: "隠岐", yomi: "おき", area: "島根県" },
+    // 山陽道
+    { name: "播磨", yomi: "はりま", area: "兵庫県" },
+    { name: "美作", yomi: "みまさか", area: "岡山県" },
+    { name: "備前", yomi: "びぜん", area: "岡山県" },
+    { name: "備中", yomi: "びっちゅう", area: "岡山県" },
+    { name: "備後", yomi: "びんご", area: "広島県" },
+    { name: "安芸", yomi: "あき", area: "広島県" },
+    { name: "周防", yomi: "すおう", area: "山口県" },
+    { name: "長門", yomi: "ながと", area: "山口県" },
+    // 南海道
+    { name: "紀伊", yomi: "きい", area: "和歌山県、三重県" },
+    { name: "淡路", yomi: "あわじ", area: "兵庫県" },
+    { name: "阿波", yomi: "あわ", area: "徳島県" },
+    { name: "讃岐", yomi: "さぬき", area: "香川県" },
+    { name: "伊予", yomi: "いよ", area: "愛媛県" },
+    { name: "土佐", yomi: "とさ", area: "高知県" },
+    // 西海道
+    { name: "筑前", yomi: "ちくぜん", area: "福岡県" },
+    { name: "筑後", yomi: "ちくご", area: "福岡県" },
+    { name: "豊前", yomi: "ぶぜん", area: "福岡県、大分県" },
+    { name: "豊後", yomi: "ぶんご", area: "大分県" },
+    { name: "肥前", yomi: "ひぜん", area: "佐賀県、長崎県" },
+    { name: "肥後", yomi: "ひご", area: "熊本県" },
+    { name: "日向", yomi: "ひゅうが", area: "宮崎県" },
+    { name: "大隅", yomi: "おおすみ", area: "鹿児島県" },
+    { name: "薩摩", yomi: "さつま", area: "鹿児島県" },
+    { name: "壱岐", yomi: "いき", area: "長崎県" },
+    { name: "対馬", yomi: "つしま", area: "長崎県" }
+];
+
+// --- 2. シャッフル関数 ---
+function shuffleArray(array) {
+    // Fisher-Yates (Knuth) shuffleアルゴリズムを使用
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// --- 3. HTML生成関数 ---
+function renderCards(data) {
+    const container = document.getElementById('card-container');
+    container.innerHTML = ''; // コンテンツをクリア
+
+    // ランダムに並べ替え
+    shuffleArray(data);
+
+    data.forEach(province => {
+        const details = document.createElement('details');
+        
+        // Summary (問題部分: 旧国名)
+        const summary = document.createElement('summary');
+        summary.textContent = province.name;
+        if (province.note) {
+            const tag = document.createElement('span');
+            tag.className = 'tag';
+            tag.textContent = province.note;
+            summary.appendChild(tag);
+        }
+        details.appendChild(summary);
+
+        // Answer (答え部分: 読み方と領域)
+        const answerDiv = document.createElement('div');
+        answerDiv.className = 'answer';
+        
+        const yomiDiv = document.createElement('div');
+        yomiDiv.className = 'yomi';
+        yomiDiv.textContent = province.yomi;
+        answerDiv.appendChild(yomiDiv);
+
+        const areaDiv = document.createElement('div');
+        areaDiv.className = 'area';
+        areaDiv.textContent = province.area;
+        answerDiv.appendChild(areaDiv);
+
+        details.appendChild(answerDiv);
+        container.appendChild(details);
+    });
+}
+
+// --- 4. イベントリスナー設定 ---
+document.addEventListener('DOMContentLoaded', () => {
+    // ページロード時とボタンクリック時にカードをレンダリング
+    renderCards(provinces); 
+    document.getElementById('shuffleButton').addEventListener('click', () => renderCards(provinces));
+});
+</script>
+
+</body>
+</html>
