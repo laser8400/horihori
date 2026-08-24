@@ -47,11 +47,15 @@
     margin: 10px 0;
   }
   .input-area { 
-    margin: 25px 0; 
+    margin: 25px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
   }
   input[type="number"] {
     font-size: 28px;
-    width: 120px;
+    width: 80px;
     text-align: center;
     padding: 10px;
     border: 2px solid #007bff;
@@ -64,7 +68,6 @@
   .unit {
     font-size: 24px;
     font-weight: bold;
-    margin-left: 10px;
     color: #555;
   }
   button {
@@ -83,7 +86,7 @@
   }
   #check-btn:hover { background-color: #0056b3; }
   #next-btn { 
-    background-color: #dc3545; /* 画像の赤ペンのような色 */
+    background-color: #dc3545; 
     color: white; 
     display: none; 
   }
@@ -111,7 +114,9 @@
   </div>
 
   <div class="input-area">
-    <input type="number" id="user-answer" placeholder="?" autocomplete="off">
+    <input type="number" id="user-min" placeholder="0" min="0" autocomplete="off">
+    <span class="unit">分</span>
+    <input type="number" id="user-sec" placeholder="0" min="0" max="59" autocomplete="off">
     <span class="unit">秒</span>
   </div>
 
@@ -124,7 +129,7 @@
 </div>
 
 <script>
-  let currentAnswer = 0;
+  let currentAnswerSec = 0; // 正解の合計秒数
 
   function generateProblem() {
     // 0分〜9分の間でランダムに開始時間を決定
@@ -132,9 +137,18 @@
     const sec1 = Math.floor(Math.random() * 60);
     const totalSec1 = min1 * 60 + sec1;
     
-    // 画像の傾向に合わせ、数秒〜90秒程度の間で差分（答え）をランダム生成
-    currentAnswer = Math.floor(Math.random() * 85) + 4; 
-    const totalSec2 = totalSec1 + currentAnswer;
+    // 1分以上の問題が出る確率を約20%に設定
+    const isMinuteProblem = Math.random() < 0.2; 
+    
+    if (isMinuteProblem) {
+      // 1分〜3分（60秒〜180秒）の間で差分を生成
+      currentAnswerSec = Math.floor(Math.random() * 121) + 60; 
+    } else {
+      // 10秒〜59秒の間で差分を生成
+      currentAnswerSec = Math.floor(Math.random() * 50) + 10; 
+    }
+    
+    const totalSec2 = totalSec1 + currentAnswerSec;
     
     const min2 = Math.floor(totalSec2 / 60);
     const sec2 = totalSec2 % 60;
@@ -146,26 +160,45 @@
     document.getElementById('time2').innerText = formatTime(min2, sec2);
     
     // UIのリセット
-    const inputField = document.getElementById('user-answer');
-    inputField.value = '';
+    document.getElementById('user-min').value = '';
+    document.getElementById('user-sec').value = '';
     document.getElementById('result-message').innerText = '';
     document.getElementById('check-btn').style.display = 'inline-block';
     document.getElementById('next-btn').style.display = 'none';
-    inputField.focus();
+    
+    // 秒の入力欄にフォーカスを当てる
+    document.getElementById('user-sec').focus();
   }
 
   function checkAnswer() {
-    const userAnswer = parseInt(document.getElementById('user-answer').value, 10);
+    const minInput = document.getElementById('user-min').value;
+    const secInput = document.getElementById('user-sec').value;
+    
+    // 入力が空の場合は0として扱う
+    const userMin = minInput === '' ? 0 : parseInt(minInput, 10);
+    const userSec = secInput === '' ? 0 : parseInt(secInput, 10);
     const resultMsg = document.getElementById('result-message');
     
-    if (isNaN(userAnswer)) {
-      resultMsg.innerText = "秒数を入力してください";
+    if (isNaN(userMin) || isNaN(userSec)) {
+      resultMsg.innerText = "数字を入力してください";
       resultMsg.className = "result incorrect";
       return;
     }
     
-    if (userAnswer === currentAnswer) {
-      resultMsg.innerText = "大正解！ （" + currentAnswer + "秒）";
+    // ユーザーの入力を合計秒数に変換
+    const userTotalSec = (userMin * 60) + userSec;
+    
+    // 正解の文字列を作成
+    const targetMin = Math.floor(currentAnswerSec / 60);
+    const targetSec = currentAnswerSec % 60;
+    let answerText = "";
+    if (targetMin > 0) {
+      answerText += targetMin + "分";
+    }
+    answerText += targetSec + "秒";
+
+    if (userTotalSec === currentAnswerSec) {
+      resultMsg.innerText = "大正解！ （" + answerText + "）";
       resultMsg.className = "result correct";
       document.getElementById('check-btn').style.display = 'none';
       document.getElementById('next-btn').style.display = 'inline-block';
@@ -173,18 +206,19 @@
     } else {
       resultMsg.innerText = "惜しい！もう一度計算してみよう";
       resultMsg.className = "result incorrect";
-      document.getElementById('user-answer').focus();
     }
   }
 
-  // Enterキーを押した時の動作をサポート（快適に連続解答できるように）
-  document.getElementById('user-answer').addEventListener('keypress', function(e) {
+  // Enterキーを押した時の動作
+  function handleKeyPress(e) {
     if (e.key === 'Enter') {
       if (document.getElementById('check-btn').style.display !== 'none') {
         checkAnswer();
       }
     }
-  });
+  }
+  document.getElementById('user-min').addEventListener('keypress', handleKeyPress);
+  document.getElementById('user-sec').addEventListener('keypress', handleKeyPress);
 
   // 初回読み込み時に1問目を生成
   window.onload = generateProblem;
